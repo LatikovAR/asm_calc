@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-enum inp_t {
+enum file_t {
     HEX = 0, ASM
 };
 
@@ -12,7 +12,8 @@ enum y_n {
 };
 
 struct work_mode {
-    enum inp_t inp_type;
+    enum file_t inp_type;
+    enum file_t out_type;
     enum y_n recode;
     enum y_n execute;
 };

@@ -12,36 +12,47 @@ static void write_asm_com(FILE* f, struct command com);
 static int read_asm_com(FILE* f, struct command* com);
 static int read_op_instr2(FILE* f, struct command* com);
 static int read_op_instr1(FILE* f, struct command* com);
+static int read_op_type(FILE* f, char* a, int max_size);
 
 void execute_prog(FILE* fin, FILE* fout, struct work_mode mode) {
     int bin_com;
     struct command com;
     struct reg* mem;
     assert(fin != nullptr);
-    assert((mode.recode == NO) || (fout != nullptr));
 
     mem = (struct reg*) calloc(RNUM, sizeof (struct reg));
     assert(mem != nullptr);
 
-    if(mode.inp_type == HEX) {
-        while(fscanf(fin, "0x%x ", &bin_com) == 1) {
-            com = decode_bin_com(bin_com);
-            if(mode.execute == YES) {
-                calc_instr(mem, com);
+    while(1) {
+        if(mode.inp_type == HEX) {
+            if(fscanf(fin, "0x%x ", &bin_com) != 1) {
+                break;
             }
-            if(mode.recode == YES) {
-                write_asm_com(fout, com);
+            com = decode_bin_com(bin_com);
+        }
+        else if(mode.inp_type == ASM) {
+            if(read_asm_com(fin, &com) != 1) {
+                break;
             }
         }
-    }
+        else {
+            assert(0);
+        }
 
-    else if(mode.inp_type == ASM) {
-        while(read_asm_com(fin, &com) == 1) {
-            if(mode.execute == YES) {
-                calc_instr(mem, com);
-            }
-            if(mode.recode == YES) {
+        if(mode.execute == YES) {
+            calc_instr(mem, com);
+        }
+
+        if(mode.recode == YES) {
+            assert(fout != nullptr);
+            if(mode.out_type == HEX) {
                 fprintf(fout, "0x%x ", code_bin_com(com));
+            }
+            else if(mode.out_type == ASM) {
+                write_asm_com(fout, com);
+            }
+            else {
+                assert(0);
             }
         }
     }
@@ -152,7 +163,7 @@ static int read_asm_com(FILE* f, struct command* com) {
     char a[8];
     int wrong_com = 0;
     assert(f != nullptr);
-    if(fscanf(f, "%s ", a) != 1) {
+    if(read_op_type(f, a, 8) != 1) {
         return 0;
     }
 
@@ -218,4 +229,24 @@ static int read_op_instr1(FILE* f, struct command* com) {
     }
     com->instr.rop = (enum reg_t) (a - 'A');
     return 0;
+}
+
+static int read_op_type(FILE* f, char* a, int max_size) {
+    int i;
+    for(i = 0; i < max_size; i++) {
+        if(fscanf(f, "%c", &(a[i])) != 1) {
+            if(i == 0) {
+                return 0;
+            }
+            assert(0 && "wrong input asm command");
+        }
+        if(a[i] == ' ') {
+            a[i] = '\0';
+            break;
+        }
+    }
+    if(i >= max_size) {
+        assert(0 && "wrong input asm command");
+    }
+    return 1;
 }
